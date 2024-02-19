@@ -9,8 +9,9 @@ from googleapiclient.errors import HttpError
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 TOKEN_PICKLE_FILE = 'token.pickle'
+CREDENTIALS_FILE = 'credentials.json'
 
-def main():
+def get_credentials():
     creds = None
     if os.path.exists(TOKEN_PICKLE_FILE):
         with open(TOKEN_PICKLE_FILE, 'rb') as token:
@@ -20,47 +21,42 @@ def main():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
         with open(TOKEN_PICKLE_FILE, 'wb') as token:
             pickle.dump(creds, token)
+    return creds
 
-    try:
-        service = build('gmail', 'v1', credentials=creds)
-
-        html = """
-            <html>
-            <head>
-                <style>
-                p { color: red; }
-                </style>
-            </head>
-            <body>
-                <p>Olá, Mundo!</p>
-            </body>
-            </html>
-            """
-
-        message = MIMEText(html, "html")
-        message['to'] = "rafamano123.rl@gmail.com"
-        message['from'] = "cursogti19@gmail.com"
-        message['subject'] = "Assunto do e-mail"
-
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-
-        send_message(service, "me", {'raw': encoded_message})
-        print("E-mail enviado com sucesso!")
-    except HttpError as error:
-        print(f'Um erro ocorreu: {error}')
+def create_message(html, to_email, from_email, subject):
+    message = MIMEText(html, "html")
+    message['to'] = to_email
+    message['from'] = from_email
+    message['subject'] = subject
+    return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
 
 def send_message(service, user_id, message):
     try:
         message = service.users().messages().send(userId=user_id, body=message).execute()
         print(f'Message Id: {message["id"]}')
-        return message
     except HttpError as error:
         print(f'Um erro ocorreu ao enviar a mensagem: {error}')
-        return None
+
+def main():
+    creds = get_credentials()
+    service = build('gmail', 'v1', credentials=creds)
+
+    html = """
+        <html>
+        <head>
+            <style>p { color: red; }</style>
+        </head>
+        <body><p>Olá, Mundo!</p></body>
+        </html>
+        """
+
+    message = create_message(html, "teste@teste.com", "teste@teste.com", "Assunto do e-mail")
+    send_message(service, "me", message)
+    print("E-mail enviado com sucesso!")
 
 if __name__ == '__main__':
     main()
