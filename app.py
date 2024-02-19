@@ -52,3 +52,15 @@ def main():
         print("E-mail enviado com sucesso!")
     except HttpError as error:
         print(f'Um erro ocorreu: {error}')
+
+def send_message(service, user_id, message):
+    try:
+        message = service.users().messages().send(userId=user_id, body=message).execute()
+        print(f'Message Id: {message["id"]}')
+        return message
+    except HttpError as error:
+        print(f'Um erro ocorreu ao enviar a mensagem: {error}')
+        return None
+
+if __name__ == '__main__':
+    main()
